@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <attr name="theme" format="reference" />
+    <attr name="label" format="string|reference" />
+    <attr name="icon" format="reference" />
+    <attr name="name" format="string" />
+    <attr name="exported" format="boolean" />
+    <attr name="configChanges" format="integer" />
+    <attr name="minSdkVersion" format="integer|string" />
+    <attr name="versionCode" format="integer" />
+    <attr name="versionName" format="string" />
+    <attr name="windowSoftInputMode" format="integer" />
+    <attr name="targetSdkVersion" format="integer|string" />
+    <attr name="allowBackup" format="boolean" />
+    <attr name="hardwareAccelerated" format="boolean" />
+    <attr name="colorPrimary" format="color" />
+    <attr name="colorPrimaryDark" format="color" />
+    <attr name="colorAccent" format="color" />
+    <attr name="statusBarColor" format="color" />
+    <attr name="usesCleartextTraffic" format="boolean" />
+    <style name="Theme.Material.Light.NoActionBar" parent="" />
+    <!-- Mismos IDs públicos del framework real de Android -->
+    <public type="attr" name="theme" id="0x01010000" />
+    <public type="attr" name="label" id="0x01010001" />
+    <public type="attr" name="icon" id="0x01010002" />
+    <public type="attr" name="name" id="0x01010003" />
+    <public type="attr" name="exported" id="0x01010010" />
+    <public type="attr" name="configChanges" id="0x0101001f" />
+    <public type="attr" name="minSdkVersion" id="0x0101020c" />
+    <public type="attr" name="versionCode" id="0x0101021b" />
+    <public type="attr" name="versionName" id="0x0101021c" />
+    <public type="attr" name="windowSoftInputMode" id="0x0101022b" />
+    <public type="attr" name="targetSdkVersion" id="0x01010270" />
+    <public type="attr" name="allowBackup" id="0x01010280" />
+    <public type="attr" name="hardwareAccelerated" id="0x010102d3" />
+    <public type="attr" name="colorPrimary" id="0x01010433" />
+    <public type="attr" name="colorPrimaryDark" id="0x01010434" />
+    <public type="attr" name="colorAccent" id="0x01010435" />
+    <public type="attr" name="statusBarColor" id="0x01010451" />
+    <public type="attr" name="usesCleartextTraffic" id="0x010104ec" />
+    <public type="style" name="Theme.Material.Light.NoActionBar" id="0x01030241" />
+</resources>

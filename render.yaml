@@ -1,0 +1,19 @@
+# Render Blueprint: crea el servidor de Hydroloop BGA (plan gratis).
+# En Render: New → Blueprint → elige este repositorio. Pedirá MONGODB_URI y DEVICE_KEY.
+services:
+  - type: web
+    name: hydroloop-bga
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/salud
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: MONGODB_URI
+        sync: false          # pégala en Render (cadena de MongoDB Atlas)
+      - key: DEVICE_KEY
+        sync: false          # la misma clave que pones en la ESP32-CAM
+      - key: JWT_SECRET
+        generateValue: true  # Render inventa una clave segura

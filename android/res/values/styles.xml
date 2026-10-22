@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.Hydroloop" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:colorPrimary">#1650C8</item>
+        <item name="android:colorPrimaryDark">#0B1F5C</item>
+        <item name="android:colorAccent">#1650C8</item>
+        <item name="android:statusBarColor">#0B1F5C</item>
+    </style>
+</resources>

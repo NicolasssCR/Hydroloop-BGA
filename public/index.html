@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hydroloop BGA</title>
+<link rel="icon" href="icono.png">
+<link rel="apple-touch-icon" href="icono.png">
+<meta name="theme-color" content="#0B1F5C">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800&family=Figtree:wght@400;600;700&display=swap">
+
+<!-- =====================================================================
+     SECCIÓN 1 · ESTILOS VISUALES
+     ===================================================================== -->
+<style>
+:root{
+  --page:#D6E8F7; --navy:#0B1F5C; --blue:#1650C8; --ink:#10224F; --mute:#5A6B8C;
+  --line:#D7E2F3; --red:#D93A2F; --redbg:#FDECEA; --green:#2E9E4F; --orange:#E08A00; --card:#fff;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--page:#0A1530}}
+:root[data-theme="dark"]{--page:#0A1530}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);font:400 15px/1.4 Figtree,system-ui,sans-serif;color:var(--ink);
+  display:flex;justify-content:center;padding:12px}
+
+.phone{width:100%;max-width:390px;height:min(800px,calc(100dvh - 24px));background:#fff;border:8px solid #10224F;
+  border-radius:44px;overflow:hidden;position:relative;display:flex;flex-direction:column}
+.notch{position:absolute;top:8px;left:50%;transform:translateX(-50%);width:110px;height:26px;background:#10224F;border-radius:20px;z-index:5}
+.screen{flex:1;overflow-y:auto;padding:46px 22px 22px}
+
+h1,h2,.cond{font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;color:var(--navy);margin:0;line-height:1}
+h1{font-size:38px;font-weight:800}
+h2{font-size:22px;font-weight:800}
+p{margin:6px 0;color:var(--mute)}
+
+.btn{display:block;width:100%;padding:14px;border-radius:14px;font:700 15px Figtree,sans-serif;cursor:pointer;margin-top:12px;
+  border:2px solid var(--blue);letter-spacing:.03em}
+.btn.pri{background:var(--blue);color:#fff}
+.btn.out{background:#fff;color:var(--blue)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{outline:3px solid #7FB0FF;outline-offset:2px}
+.link{display:block;text-align:center;margin-top:16px;color:var(--blue);font-size:13px;text-decoration:underline}
+
+label{display:block;font-weight:600;font-size:13px;margin:12px 0 4px;color:var(--navy)}
+input,select{width:100%;padding:12px;border-radius:12px;border:1.5px solid var(--line);font:inherit;background:#fff;color:var(--ink)}
+
+.welcome{text-align:center;padding-top:14px}
+.brand{font:800 22px 'Barlow Condensed',sans-serif;color:var(--blue);margin:2px 0 22px}
+.tagline{font-weight:700;color:var(--blue);margin-top:14px}
+
+/* Escaneo */
+.scan{background:#1B1F2A;margin:-46px -22px -22px;padding:46px 18px 22px;min-height:100%;color:#fff}
+.scan h2{color:#fff;text-align:center;font-size:20px}
+.scan p{color:#C9D2E6;text-align:center}
+.scan .link{color:#9EC0FF}
+.bill{background:#fff;color:var(--ink);border-radius:12px;padding:12px;margin-top:12px;font-size:12.5px;position:relative}
+.bill .tit{background:var(--blue);color:#fff;font-weight:700;font-size:11px;padding:3px 8px;border-radius:3px;margin:8px 0 4px}
+.bill .r{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:1px 0}
+.bill .r span{flex:0 0 auto}
+/* Los valores se muestran en campos de solo lectura */
+.bill .r input{flex:1;min-width:0;width:auto;text-align:right;padding:3px 6px;border:1px solid transparent;border-radius:6px;
+  font:700 12.5px Figtree,sans-serif;background:transparent;color:var(--ink);transition:color .3s,background .3s}
+.bill .r input{cursor:default;pointer-events:none}   /* solo lectura: los datos salen de la factura */
+.bill .r input.ok{color:var(--green)}
+.bill .r input.calc{color:var(--blue)}
+.bill .r input.falta{color:var(--orange);background:#FFF5E5}
+.bill .tot{border:2px solid var(--green);border-radius:8px;padding:6px 8px;margin-top:8px}
+.chip{position:absolute;right:8px;top:-14px;background:#fff;color:var(--green);font-weight:700;border-radius:10px;padding:4px 10px;box-shadow:0 2px 8px #0004;max-width:85%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.thumb{width:100%;max-height:140px;object-fit:cover;border-radius:10px;margin-top:10px}
+.leyenda{font-size:11.5px;color:#C9D2E6;margin-top:8px;text-align:center}
+.leyenda i{font-style:normal;color:#FFC266}
+.leyenda u{text-decoration:none;color:#8FB4FF}
+details.raw{margin-top:10px;font-size:11px;color:#C9D2E6}
+details.raw pre{white-space:pre-wrap;background:#0F121A;padding:8px;border-radius:8px;max-height:200px;overflow:auto}
+
+/* Dashboard */
+.dash-head{background:var(--blue);color:#fff;margin:-46px -22px 14px;padding:46px 16px 12px;display:flex;justify-content:space-between;align-items:center}
+.dash-head span{font:700 15px 'Barlow Condensed',sans-serif;letter-spacing:.06em;text-transform:uppercase}
+.icon-btn{background:none;border:0;color:#fff;font-size:22px;cursor:pointer;padding:4px 8px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin:12px 0;box-shadow:0 2px 10px #1650C814}
+.center{text-align:center}
+.big{font:800 46px 'Barlow Condensed',sans-serif;color:var(--navy);line-height:1}
+.alert{display:flex;gap:10px;align-items:flex-start;background:var(--redbg);border:1.5px solid var(--red);border-radius:12px;padding:10px 12px;color:#8A1F17}
+.alert.ok{background:#E8F6EC;border-color:var(--green);color:#1D6A36}
+.alert b{display:block;font-size:14px}
+.err{color:var(--red);font-size:13px;min-height:18px}
+</style>
+</head>
+
+<body>
+<div class="phone">
+  <div class="notch"></div>
+  <div class="screen" id="screen"></div>
+</div>
+
+<script>
+/* =====================================================================
+   SECCIÓN 3 · ESTADO GENERAL Y UTILIDADES
+   ===================================================================== */
+/* Dirección del servidor (API con MongoDB).
+   - Si la app se abre desde el mismo servidor (http://localhost:3000) se deja vacío.
+   - En la app móvil (Capacitor) pon aquí la URL pública del servidor, p. ej. 'https://hydroloop-api.onrender.com'. */
+const API_URL = location.protocol.startsWith('http') ? '' : 'http://localhost:3000';
+
+let S = { user: null, token: null, screen: 'welcome' };
+// ¿Corre dentro de la app Android? (la pantalla inicial de la app abre el servidor con ?app=1)
+const EN_APP = (() => { try{
+  if(new URLSearchParams(location.search).get('app') === '1') sessionStorage.setItem('hbga_app', '1');
+  return sessionStorage.getItem('hbga_app') === '1';
+}catch(e){ return false; } })();
+const $ = id => document.getElementById(id);
+const screenEl = $('screen');
+const cop = n => '$' + Math.round(n).toLocaleString('es-CO');
+const rnd = (a, b) => a + Math.random() * (b - a);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+// Solo el token de sesión se guarda en el teléfono; los datos viven en MongoDB
+function cargar(){ try{ S.token = localStorage.getItem('hbga_token'); }catch(e){} }
+function guardar(){ try{ S.token ? localStorage.setItem('hbga_token', S.token) : localStorage.removeItem('hbga_token'); }catch(e){} }
+
+// Llama al API y devuelve el JSON; lanza un Error con el mensaje del servidor si algo falla
+async function api(ruta, metodo = 'GET', cuerpo){
+  let r;
+  try{
+    r = await fetch(API_URL + '/api' + ruta, {
+      method: metodo,
+      headers: { 'Content-Type': 'application/json', ...(S.token ? { Authorization: 'Bearer ' + S.token } : {}) },
+      body: cuerpo ? JSON.stringify(cuerpo) : undefined
+    });
+  }catch(e){ throw new Error('No hay conexión con el servidor.'); }
+  const data = await r.json().catch(() => ({}));
+  if(r.status === 401 && S.token && !ruta.startsWith('/auth/login')){ cerrarSesion(); throw new Error(data.error || 'Sesión expirada.'); }
+  if(!r.ok) throw new Error(data.error || 'Error ' + r.status);
+  return data;
+}
+function cerrarSesion(){ S = { user:null, token:null, screen:'welcome' }; guardar(); render(); }
+function entrar(data){ S.token = data.token; S.user = data.usuario; guardar(); }
+function ir(pantalla){ S.screen = pantalla; render(); }
+
+
+/* =====================================================================
+   SECCIÓN 4 · LOGIN Y REGISTRO
+   ===================================================================== */
+function vistaBienvenida(){
+  screenEl.innerHTML = `
+  <div class="welcome">
+    <svg width="64" height="76" viewBox="0 0 60 70" aria-hidden="true">
+      <path d="M30 4C30 4 8 30 8 42a22 22 0 0 0 44 0C52 30 30 4 30 4Z" fill="none" stroke="#1650C8" stroke-width="5"/>
+      <path d="M38 40c2 8-3 13-9 13" fill="none" stroke="#1650C8" stroke-width="4" stroke-linecap="round"/>
+    </svg>
+    <div class="brand">Hydroloop <small>BGA</small></div>
+    <h1>Hydroloop<br>BGA</h1>
+    <div class="tagline">¡Toma el control de tu agua!</div>
+    <p>Monitorea, predice y ahorra. Tu asistente inteligente para el hogar.</p>
+    <button class="btn pri" id="bLogin">INICIAR SESIÓN</button>
+    <button class="btn out" id="bReg">REGISTRARSE</button>
+    <a href="#" class="link" id="bSkip">saltar onboarding</a>
+    ${EN_APP ? '<p style="font-size:12px;margin-top:18px">📱 Para cambiar de servidor, usa el botón <b>Atrás</b> del celular.</p>' : ''}
+  </div>`;
+  $('bLogin').onclick = () => vistaAuth('login');
+  $('bReg').onclick   = () => vistaAuth('reg');
+  $('bSkip').onclick  = async e => { e.preventDefault();      // cuenta de demostración
+    const demo = { correo:'demo@hydroloop.co', clave:'demo1234' };
+    try{ entrar(await api('/auth/login', 'POST', demo)); }
+    catch(err){
+      try{ entrar(await api('/auth/registro', 'POST', { ...demo, nombre:'Usuario demo', estrato:'3', dir:'Cra 27 # 45-10', municipio:'Bucaramanga' })); }
+      catch(err2){ alert(err2.message); return; }
+    }
+    ir('dash'); };
+}
+
+function vistaAuth(modo){
+  const reg = modo === 'reg';
+  screenEl.innerHTML = `
+  <h2>${reg ? 'Crear cuenta' : 'Iniciar sesión'}</h2>
+  <p>${reg ? 'Configura tu perfil básico para empezar a monitorear tu consumo.' : 'Entra con tu correo y contraseña.'}</p>
+  ${reg ? `<label for="n">Nombre</label><input id="n" autocomplete="name">` : ''}
+  <label for="c">Correo</label><input id="c" type="email" autocomplete="email">
+  <label for="p">Contraseña</label><input id="p" type="password" autocomplete="current-password">
+  ${reg ? `
+  <label for="e">Estrato</label><select id="e">${[1,2,3,4,5,6].map(i=>`<option ${i==3?'selected':''}>${i}</option>`).join('')}</select>
+  <label for="d">Dirección</label><input id="d" autocomplete="street-address">
+  <label for="m">Municipio</label><input id="m" value="Bucaramanga">
+  <label for="s">Serial del sensor Hydroloop (opcional)</label><input id="s" placeholder="Ej: ESP32-001">` : ''}
+  <div class="err" id="err"></div>
+  <button class="btn pri" id="ok">${reg ? 'CREAR CUENTA' : 'ENTRAR'}</button>
+  <a href="#" class="link" id="atras">volver</a>`;
+  $('atras').onclick = e => { e.preventDefault(); ir('welcome'); };
+  $('ok').onclick = async () => {
+    const v = id => ($(id) ? $(id).value.trim() : '');
+    if(!v('c').includes('@') || v('p').length < 4 || (reg && !v('n'))){
+      $('err').textContent = 'Revisa el nombre, un correo válido y una contraseña de mínimo 4 caracteres.'; return; }
+    $('ok').disabled = true; $('err').textContent = '';
+    try{
+      const data = reg
+        ? await api('/auth/registro', 'POST', { nombre:v('n'), correo:v('c'), clave:v('p'), estrato:v('e'), dir:v('d'), municipio:v('m'), dispositivo:v('s') || null })
+        : await api('/auth/login', 'POST', { correo:v('c'), clave:v('p') });
+      entrar(data); ir(reg ? 'scan' : 'dash');
+    }catch(err){ $('err').textContent = err.message; $('ok').disabled = false; }
+  };
+}
+
+
+/* =====================================================================
+   SECCIÓN 5 · ESCANEO DE FACTURA CON OCR REAL
+   5.1 generarFactura()        → datos simulados (solo para pruebas sin foto)
+   5.2 cargarTesseract()       → descarga el motor OCR (Tesseract.js) la 1ª vez
+   5.3 prepararImagen()        → escala de grises + contraste para leer mejor
+   5.4 interpretarFacturaAMB() → convierte el TEXTO leído en los campos de la factura
+   5.5 leerFacturaConOCR()     → foto → texto → objeto factura
+   5.6 vistaEscaneo()          → pantalla (los valores se pueden corregir a mano)
+   ===================================================================== */
+
+/* 5.1 Simulación */
+function generarFactura(){
+  const actual = Math.round(rnd(8, 16)), valorM3 = Math.round(rnd(1800, 2600));
+  const fijo = Math.round(rnd(18000, 26000) / 50) * 50, otros = Math.round(rnd(500, 1500) / 50) * 50;
+  return {
+    nombre: S.user ? S.user.nombre : 'Usuario', dir: S.user && S.user.dir || 'Cra 27 # 45-10',
+    municipio: S.user ? S.user.municipio : 'Bucaramanga', estrato: S.user ? S.user.estrato : '3', periodo: '—',
+    actual, anterior: Math.round(rnd(7, 15)), promedio: Math.round(rnd(8, 13)), dias: 30,
+    fijo, valorM3, consumoCobro: actual * valorM3, otros, total: fijo + actual * valorM3 + otros,
+    _detectados: []
+  };
+}
+
+/* 5.2 Motor OCR: se carga solo cuando se necesita (necesita internet la primera vez) */
+const OCR_CDN = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+function cargarTesseract(){
+  if(window.Tesseract) return Promise.resolve();
+  return new Promise((ok, fail) => {
+    const s = document.createElement('script'); s.src = OCR_CDN; s.onload = ok;
+    s.onerror = () => fail(new Error('no se pudo descargar el motor OCR. Revisa tu conexión a internet.'));
+    document.head.appendChild(s);
+  });
+}
+
+/* 5.3 Mejora la foto antes de leerla: tamaño fijo, gris y más contraste */
+async function prepararImagen(file, lado = 2400){
+  const url = URL.createObjectURL(file);
+  const img = await new Promise((ok, fail) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => fail(new Error('la imagen no se pudo abrir.')); i.src = url; });
+  const k = lado / Math.max(img.naturalWidth, img.naturalHeight);
+  const c = document.createElement('canvas');
+  c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
+  const ctx = c.getContext('2d'); ctx.drawImage(img, 0, 0, c.width, c.height);
+  const d = ctx.getImageData(0, 0, c.width, c.height), p = d.data;
+  for(let i = 0; i < p.length; i += 4){
+    let g = 0.299*p[i] + 0.587*p[i+1] + 0.114*p[i+2];
+    g = (g - 128) * 1.5 + 128; g = g < 0 ? 0 : g > 255 ? 255 : g;
+    p[i] = p[i+1] = p[i+2] = g;
+  }
+  ctx.putImageData(d, 0, 0); URL.revokeObjectURL(url);
+  return c;
+}
+
+/* Convierte "141.680", "$ 63.618" o "6,77" en número */
+function num(s){
+  if(s == null) return null;
+  s = String(s).replace(/[^\d.,]/g, '').replace(/^[.,]+|[.,]+$/g, '');
+  if(!s) return null;
+  if(/^\d{1,3}([.,]\d{3})+$/.test(s)) return +s.replace(/[.,]/g, '');   // separador de miles
+  const n = +s.replace(/\./g, '').replace(',', '.');
+  return isNaN(n) ? null : n;
+}
+const uno   = (t, re) => { const m = t.match(re); return m ? m[1].trim() : null; };
+const todos = (t, re) => [...t.matchAll(re)].map(m => num(m[1])).filter(n => n != null);
+const suma  = a => a.reduce((x, y) => x + y, 0);
+
+/* 5.4 Lee el texto de una factura del Acueducto Metropolitano de Bucaramanga (amb).
+   Cada dato se busca por su etiqueta impresa en el recibo. Las expresiones toleran
+   errores típicos del OCR ("USUAMO", "MUNICIPO", "$" en vez de "#", etc.).
+   extraerCampos() devuelve SOLO lo que encontró; armarFactura() completa el resto. */
+function normalizar(texto){
+  return texto.toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\(\s*[$S5]?\s*\/\s*M[3³]?\s*\)/g, ' ')      // quita "($/m³)" para no confundir el 3
+    .replace(/\(\s*[$S5]\s*\/\s*MES\s*\)/g, ' ')            // quita "($/mes)"
+    .replace(/\(\s*M[3³]\s*\)/g, ' ')                        // quita "(m³)"
+    .replace(/\(\s*1\s*[-.:,]?\s*15\s*\)?/g, ' ')              // quita "(1-15)", "(1.15", "(115"
+    .replace(/\bM\s*[3³]\b/g, 'M');                          // "M3" suelto
+}
+const CORTE_DERECHA = /\s+(MARCA|LECT|LECU|LECR|MEDI|MEDD|MATA|DIAM|DIME|NO\b|BARRIO|BANO|COMERCIO).*$/;
+
+function extraerCampos(texto){
+  const t = normalizar(texto), N = '(\\d{1,3}(?:[ .,]\\d{3})+(?![\\d])|\\d+(?:[.,]\\d+)?)', f = {};
+  const pon = (k, v) => { if(v != null && v !== '' && !(typeof v === 'number' && isNaN(v)) && f[k] == null) f[k] = v; };
+
+  // Usuario (la cédula antes del nombre evita confundirlo con otro texto)
+  let nombre = uno(t, /USUA[A-Z]{1,3}\W*\d{5,}\s+([A-Z][A-Z ]{8,}[A-Z])/) || uno(t, /SUSCRIPTOR\W*([A-Z][A-Z ]{8,}[A-Z])/);
+  if(nombre){ nombre = nombre.replace(CORTE_DERECHA, '').replace(/\s+/g, ' ').trim(); if(nombre.split(' ').length >= 2) pon('nombre', nombre); }
+  let dir = uno(t, /[A-Z]*CCION\s*PREDIO\W*([^\n]+)/);
+  if(dir){ dir = dir.replace(CORTE_DERECHA, '').replace(/\s[$S]\s/g, ' # ').replace(/\s+/g, ' ').trim(); if(/\d/.test(dir)) pon('dir', dir); }
+  const MUNICIPIOS = 'BUCARAMANGA|FLORIDABLANCA|GIRON|PIEDECUESTA|LEBRIJA|RIONEGRO|LOS SANTOS';
+  pon('municipio', uno(t, new RegExp('N[A-Z]{0,2}CIP[A-Z]{0,2}\\W{0,3}(' + MUNICIPIOS + ')\\b'))
+                || uno(t, /MU[A-Z]{0,3}CIP[A-Z]{0,2}\s*[:;.]\s*([A-Z]{4,})/));
+  if(f.municipio) f.municipio = f.municipio.charAt(0) + f.municipio.slice(1).toLowerCase();
+  pon('estrato', uno(t, /ESTRATO\s*(\d)/));
+  const per = t.match(/(ENERO|FEBRERO|MARZO|ABRIL|MAYO|JUNIO|JULIO|AGOSTO|SEPTIEMBRE|OCTUBRE|NOVIEMBRE|DICIEMBRE)\s*\/\s*(20\d\d)/);
+  pon('periodo', per && per[1] + '/' + per[2]);
+
+  // Consumo (m³)
+  const lecAnt = num(uno(t, /LEC\w*\s+ANT\w*[^\d\n]{0,8}(\d{3,7})/));
+  const lecAct = num(uno(t, /LEC\w*\s+ACT\w*[^\d\n]{0,8}(\d{3,7})/));
+  // "Consumo Mes (m³) 15": la unidad a veces sale como "(M1)", "(M')"... se salta para no tomar ese número
+  let actual = num(uno(t, /CONSUMO\s*MES\s*(?:\(\s*M\s*[^\s)]{0,2}\s*\)?)?[^\d\n]{0,8}(\d{1,3})\b/));
+  if(lecAnt != null && lecAct != null && lecAct > lecAnt && lecAct - lecAnt < 200) pon('_mLect', lecAct - lecAnt);
+  pon('actual', actual);
+  pon('promedio', num(uno(t, /PROMEDIO\s*[A-Z]{0,12}\s*(?:M\W{0,2}[1-3]?\W)?[^\d\n]{0,8}(\d{1,3})\b/)));
+
+  // Tarifas: acueducto (amb) + alcantarillado (EMPAS)
+  let refM3 = todos(t, /REF\w*\s*CONSUMO[^\n]{0,16}?\$?\s*(\d{1,2}[ .,]\d{3})(?!\d)/g).filter(n => n >= 300 && n <= 20000);
+  const basicos = todos(t, new RegExp('CONSUMO\\s*BAS\\w*[^\\d\\n]{0,10}' + N, 'g')).filter(n => n >= 1000 && n <= 2000000);
+  // Corrección cruzada: consumo básico ÷ tarifa = m³ enteros (corrige un dígito mal leído, p. ej. 3.454 → 3.464)
+  if(refM3.length >= 2 && basicos.length >= 2){
+    const m = Math.round((basicos[0] + basicos[1]) / (refM3[0] + refM3[1]));
+    const err = Math.abs((basicos[0] + basicos[1]) / m - (refM3[0] + refM3[1])) / (refM3[0] + refM3[1]);
+    if(m > 0 && m <= 200 && err < 0.03) refM3 = [Math.round(basicos[0] / m), Math.round(basicos[1] / m)];
+  } else if(refM3.length === 1 && basicos.length >= 2){
+    // Solo una tarifa legible: m³ básicos = consumo básico ÷ tarifa (debe dar un entero) → valor m³ total
+    for(const b of basicos.slice(0, 2)){
+      const m = Math.round(b / refM3[0]);
+      if(m > 0 && m <= 15 && Math.abs(b / m - refM3[0]) / refM3[0] < 0.03){ refM3 = [Math.round((basicos[0] + basicos[1]) / m), 0]; break; }
+    }
+  }
+  if(refM3.length >= 2) pon('valorM3', suma(refM3.slice(0, 2)));
+  const cf = todos(t, new RegExp('CARGO\\s*F\\w{1,3}\\s*A[CL]\\w*[^\\d\\n]{0,10}' + N, 'g')).filter(n => n >= 1000 && n <= 100000);
+  const rf = todos(t, /REF\w*\s*CARGO[^\n]{0,18}?\$?\s*(\d{1,3}[ .,]\d{3})(?!\d)/g).filter(n => n >= 1000 && n <= 100000);
+  if(cf.length >= 2) pon('_cf', cf.slice(0, 2));
+  if(rf.length >= 2) pon('_rf', rf.slice(0, 2));
+  if(basicos.length >= 2) pon('_bas', basicos.slice(0, 2));
+  const fijos = cf.length >= 2 ? cf : rf;
+  if(fijos.length >= 2) pon('fijo', suma(fijos.slice(0, 2)));
+  if(basicos.length >= 2) pon('consumoCobro', suma(basicos.slice(0, 2)));
+  // Subtotales del mes de acueducto y alcantarillado (letra grande, se leen mejor)
+  let subt = todos(t, /SUBTOTAL\s*MES\W*\$?\s*(\d{1,3}[.,]\d{3})/g).filter(n => n >= 1000);
+  if(subt.length < 3){                                    // respaldo: "TOTAL ACUEDUCTO / ALCANTARILLADO / ASEO"
+    const serv = ['ACUEDUCTO','ALCANTARILLADO','ASEO'].map(s => num(uno(t, new RegExp('TOTAL\\s*' + s + '\\W*\\$?\\s*(\\d{1,3}[.,]\\d{3})'))));
+    if(serv.filter(Boolean).length > subt.length) subt = serv.map(v => v || 0);
+  }
+  if(subt[0] && subt[1]){ pon('subtAguas', subt[0] + subt[1]); pon('_sub', subt.slice(0, 2)); }
+  if(subt.length >= 3 && subt.every(v => v >= 1000)) pon('sumaSubt', subt[0] + subt[1] + subt[2]);
+
+  // Total a pagar. Regla principal: total = subtotal acueducto + alcantarillado + aseo.
+  // Cualquier otro candidato debe ser MAYOR que acueducto + alcantarillado (descarta subtotales sueltos).
+  const minimo = f.subtAguas || 0, sirve = n => n && n > minimo;
+  let total = f.sumaSubt || null;
+  if(!total){
+    const etiquetados = [
+      num(uno(t, /VALOR\s*NETO\s*A\s*PAGAR[^\d\n]{0,10}(\d[\d.,]*)/)),
+      num(uno(t, /TOTAL\s*FACTURADO[\s\S]{0,80}?\$\s*(\d[\d.,]*)/)),
+      num(uno(t, /TOTAL\s*A\s*PAGAR[\s\S]{0,60}?\$\s*(\d[\d.,]*)/))
+    ].filter(sirve);
+    total = totalVotado(t, minimo) || etiquetados[0] || null;
+  }
+  if(total && total >= 1000 && total <= 5000000) pon('total', total);
+  return f;
+}
+
+/* El total aparece 3 veces en el recibo amb: el valor con $ que más se repite es el total */
+function totalVotado(t, minimo = 0){
+  const cuenta = {};
+  todos(t, /\$?\s*\b(\d{2,3}[.,]\d{3})\b/g).filter(n => n >= 10000 && n > minimo).forEach(n => cuenta[n] = (cuenta[n] || 0) + 1);
+  const rep = Object.entries(cuenta).filter(([, c]) => c >= 2).sort((a, b) => b[1] - a[1] || b[0] - a[0]);
+  return rep.length ? +rep[0][0] : null;
+}
+
+/* Tarifas de referencia (acueducto amb + alcantarillado EMPAS, factura abril/2026, estrato 4).
+   Se usan SOLO si el OCR no logra leer las tarifas de la foto. */
+const TARIFA_REF = { fijo: 11862 + 7839, valorM3: 3464 + 2632 };
+
+/* Completa lo que faltó con valores razonables y marca qué se leyó de verdad */
+function armarFactura(f){
+  f = { ...f };
+  // Cargo fijo: la factura lo trae 2 veces por servicio ("Referencia cargo fijo" y "Cargo fijo ...").
+  // Si no coinciden, gana el que cuadra con subtotal − consumo básico.
+  if(f._sub && f._bas){
+    const partes = [0, 1].map(i => {
+      const meta = f._sub[i] - f._bas[i];
+      const c = [f._cf && f._cf[i], f._rf && f._rf[i]].filter(v => v >= 1000);
+      return c.length ? c.sort((a, b) => Math.abs(a - meta) - Math.abs(b - meta))[0] : null;
+    });
+    if(partes[0] && partes[1]) f.fijo = partes[0] + partes[1];
+  }
+  const det = Object.keys(f).filter(k => !k.startsWith('_') && !['subtAguas','sumaSubt'].includes(k));
+  const calc = [];                                              // calculados a partir de lo leído
+  const out = Object.assign({}, generarFactura(), f);
+  Object.keys(out).filter(k => k.startsWith('_')).forEach(k => delete out[k]);
+  delete out.subtAguas; delete out.sumaSubt;
+  if(S.user && !f.estrato && S.user.estrato){ out.estrato = S.user.estrato; calc.push('estrato'); }      // del perfil
+  if(S.user && !f.municipio && S.user.municipio){ out.municipio = S.user.municipio; calc.push('municipio'); }
+  if(f.fijo == null) out.fijo = TARIFA_REF.fijo;
+  // Los subtotales (letra grande) mandan: si cargo fijo + consumo no cuadra con ellos (±4 %), el consumo se leyó mal
+  if(f.subtAguas && f.consumoCobro != null && Math.abs(f.subtAguas - out.fijo - f.consumoCobro) / f.subtAguas > 0.04){
+    delete f.consumoCobro; delete out.consumoCobro; det.splice(det.indexOf('consumoCobro'), 1);
+  }
+  if(f.valorM3 == null) out.valorM3 = TARIFA_REF.valorM3;
+  // Cargo por consumo: leído, o subtotal (acueducto+alcantarillado) − cargo fijo
+  if(f.consumoCobro == null && f.subtAguas){ out.consumoCobro = Math.max(0, f.subtAguas - out.fijo); if(f.fijo) calc.push('consumoCobro'); }
+  // Comprobación del consumo leído (m³):
+  //  - por subtotales: (acueducto + alcantarillado − cargo fijo) ÷ valor m³
+  //  - por consumo básico (cubre hasta 15 m³): si da menos de 15, el consumo es exactamente ese
+  const mSubt  = f.subtAguas ? Math.round((f.subtAguas - out.fijo) / out.valorM3) : null;
+  const mBas   = f.consumoCobro && f.valorM3 ? Math.round(f.consumoCobro / f.valorM3) : null;
+  if(f.actual != null){
+    const malo = (mSubt != null && Math.abs(f.actual - mSubt) > 1)
+              || (mBas != null && (mBas < 15 ? f.actual !== mBas : f.actual < 15))
+              || (f._mLect != null && Math.abs(f.actual - f._mLect) > 1 && mSubt == null && mBas == null);
+    if(malo){ delete f.actual; det.splice(det.indexOf('actual'), 1); out.actual = null; }
+  }
+  if(f.actual == null){
+    const m = mSubt ?? f._mLect ?? mBas;
+    if(m != null && m > 0){ out.actual = m; calc.push('actual'); f.actual = m; }
+  }
+  // Promedio leído absurdo frente al consumo (5 veces más o menos) → se descarta
+  if(f.promedio != null && out.actual && (f.promedio > out.actual * 5 || f.promedio * 5 < out.actual)){
+    delete f.promedio; det.splice(det.indexOf('promedio'), 1);
+  }
+  // m³ del mes: leído, o cargo por consumo ÷ valor del m³
+  if(out.actual == null && (f.consumoCobro || f.subtAguas)){
+    out.actual = Math.max(1, Math.round(out.consumoCobro / out.valorM3));
+    if(f.consumoCobro || f.valorM3 || (f.fijo && f.subtAguas)) calc.push('actual');
+  }
+  if(!(out.actual > 0)) out.actual = generarFactura().actual;     // sin datos para calcularlo: valor de prueba (naranja)
+  if(out.consumoCobro == null) out.consumoCobro = out.actual * out.valorM3;
+  out.dias = 30; calc.push('dias');
+  if(f.promedio == null) out.promedio = out.actual;
+  out.anterior = null; calc.push('anterior');                    // se toma de la factura anterior guardada
+  if(f.total == null) out.total = out.fijo + out.consumoCobro + out.otros;
+  // Otros cobros (aseo, ajustes, tasas): total − acueducto − alcantarillado
+  out.otros = Math.max(0, out.total - (f.subtAguas && f.total ? f.subtAguas : out.fijo + out.consumoCobro));
+  if(f.total && (f.subtAguas || (f.fijo && f.consumoCobro))) calc.push('otros');
+  out._detectados = det; out._calculados = calc;
+  return out;
+}
+const interpretarFacturaAMB = texto => armarFactura(extraerCampos(texto));
+
+/* 5.5 Foto → texto (OCR) → factura.
+   1) Lee la foto completa y ubica dónde están las palabras clave (MEDICIÓN, CONCEPTOS).
+   2) Recorta esas zonas de letra pequeña, las amplía y las vuelve a leer (lee mucho mejor las tarifas).
+   3) Si aún faltan datos, una pasada extra con la foto completa más grande. */
+const normPal = s => s.toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+function palabras(data){
+  const out = [];
+  (data.blocks || []).forEach(b => (b.paragraphs || []).forEach(p => (p.lines || []).forEach(l => (l.words || []).forEach(w => out.push(w)))));
+  return out;
+}
+// Rectángulos (en píxeles de la imagen leída) de las zonas con letra pequeña, ubicados por palabras clave
+function zonasPequenas(words, W, H){
+  const z = [], alto = w => w.bbox.y1 - w.bbox.y0;
+  const med = words.find(w => /MEDICI/.test(normPal(w.text)));
+  if(med){ const a = alto(med); z.push({ x: med.bbox.x0 - 5.5*a, y: med.bbox.y0 - 0.5*a, w: (med.bbox.x1 - med.bbox.x0) + 11*a, h: 16*a }); }
+  const prom = words.find(w => /^PROMEDIO/.test(normPal(w.text)));
+  if(prom){ const a = alto(prom);                                    // una sola línea, muy ampliada
+    z.push({ x: prom.bbox.x0 - a, y: prom.bbox.y0 - 1.5*a, w: (prom.bbox.x1 - prom.bbox.x0) + 16*a, h: 4*a, escala: 4, psm: '7' });
+    z.push({ x: prom.bbox.x0 - 2*a, y: prom.bbox.y0 - 2.5*a, w: (prom.bbox.x1 - prom.bbox.x0) + 20*a, h: 6*a, escala: 3 }); }
+  const conc = words.filter(w => /^CONCEPT/.test(normPal(w.text))).sort((a, b) => a.bbox.y0 - b.bbox.y0);
+  if(conc.length){
+    const y0 = conc[0].bbox.y0;
+    conc.filter(w => w.bbox.y0 - y0 < 3 * alto(w)).sort((a, b) => a.bbox.x0 - b.bbox.x0).slice(0, 2).forEach(w => {
+      const a = alto(w), cx = (w.bbox.x0 + w.bbox.x1) / 2;           // tarifas encima y conceptos debajo de "CONCEPTOS"
+      z.push({ x: cx - 5.5*a, y: w.bbox.y0 - 4.2*a, w: 16*a, h: 7.8*a });
+    });
+  }
+  return z.map(r => { const x = Math.max(0, r.x), y = Math.max(0, r.y);
+    return { ...r, x, y, w: Math.min(W - x, r.w), h: Math.min(H - y, r.h) }; }).filter(r => r.w > 20 && r.h > 12);
+}
+function recortar(canvas, r, escala = 2.5){
+  const c = document.createElement('canvas');
+  c.width = Math.round(r.w * escala); c.height = Math.round(r.h * escala);
+  const ctx = c.getContext('2d'); ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(canvas, r.x, r.y, r.w, r.h, 0, 0, c.width, c.height);
+  return c;
+}
+
+async function leerFacturaConOCR(archivoFoto, avisar = () => {}){
+  avisar('Cargando motor OCR...');
+  await cargarTesseract();
+  let etapa = '';
+  const worker = await Tesseract.createWorker('spa', 1, {
+    logger: m => {
+      if(m.status === 'recognizing text') avisar(`Leyendo${etapa}... ` + Math.round(m.progress * 100) + '%');
+      else if(/load/.test(m.status || '')) avisar('Descargando idioma español...');
+    }
+  });
+  try{
+    avisar('Preparando imagen...');
+    const img = await prepararImagen(archivoFoto, 2400);
+    const r1 = await worker.recognize(img, {}, { text: true, blocks: true });
+    let texto = r1.data.text;
+
+    // Zonas de letra pequeña, ampliadas
+    const zonas = zonasPequenas(palabras(r1.data), img.width, img.height);
+    let textoZonas = '';
+    for(let i = 0; i < zonas.length; i++){
+      etapa = ` detalle ${i + 1}/${zonas.length}`;
+      const z = zonas[i];
+      if(z.psm) await worker.setParameters({ tessedit_pageseg_mode: z.psm });
+      textoZonas += (await worker.recognize(recortar(img, z, z.escala || 2.5))).data.text + '\n';
+      if(z.psm) await worker.setParameters({ tessedit_pageseg_mode: '6' });
+    }
+    // De las zonas ampliadas solo se toman tarifas y medición (que ganan sobre la foto completa)
+    const deZonas = Object.fromEntries(Object.entries(extraerCampos(textoZonas))
+      .filter(([k]) => ['valorM3','fijo','consumoCobro','actual','subtAguas','promedio','_cf','_rf','_bas','_mLect'].includes(k)));
+    let campos = Object.assign(extraerCampos(texto), deZonas);
+    texto = textoZonas + '\n----- foto completa -----\n' + texto;
+
+    if(Object.keys(campos).length < 10){
+      etapa = ' (pasada extra)'; avisar('Afinando lectura...');
+      await worker.setParameters({ tessedit_pageseg_mode: '3' });     // otro modo de lectura: encuentra otras cosas
+      const t2 = (await worker.recognize(await prepararImagen(archivoFoto, 3600))).data.text;
+      campos = Object.assign(extraerCampos(t2), campos);
+      if(!campos.sumaSubt){
+        const tv = totalVotado(normalizar(r1.data.text + '\n' + t2), campos.subtAguas || 0);
+        if(tv) campos.total = tv;
+      }
+      texto += '\n\n----- pasada extra -----\n' + t2;
+    }
+    const factura = armarFactura(campos);
+    factura._texto = texto;
+    return factura;
+  } finally {
+    await worker.terminate();
+  }
+}
+
+/* 5.6 Pantalla de escaneo */
+function vistaEscaneo(){
+  // [etiqueta, clave, tipo]  tipo: '$' dinero, 'n' número, '' texto
+  const campos = [
+    ['Nombre del usuario','nombre',''], ['Dirección','dir',''], ['Municipio','municipio',''], ['Estrato','estrato',''],
+    ['Periodo facturado','periodo',''],
+    ['Consumo actual (m³)','actual','n'], ['Consumo anterior (m³)','anterior','n'], ['Consumo promedio (m³)','promedio','n'],
+    ['Días de consumo','dias','n'],
+    ['Valor por m³ (acued.+alcant.)','valorM3','$'], ['Cargo fijo','fijo','$'], ['Cargo por consumo','consumoCobro','$'],
+    ['Otros cobros (aseo, ajustes)','otros','$'], ['TOTAL A PAGAR','total','$']
+  ];
+  const fila = (c, i) => `<div class="r"><span>${c[0]}</span><input id="f${i}" value="—" aria-label="${c[0]}" readonly tabindex="-1"></div>`;
+  screenEl.innerHTML = `
+  <div class="scan">
+    <h2>Escanear factura</h2>
+    <p id="estado">Toma o sube una foto de tu factura del acueducto (amb). Que se vea completa, plana y con buena luz.</p>
+    <img id="thumb" class="thumb" alt="Foto de la factura" hidden>
+    <div class="bill">
+      <span class="chip" id="chip" hidden></span>
+      <div class="tit">INFORMACIÓN DEL USUARIO</div>${campos.slice(0,5).map((c,i)=>fila(c,i)).join('')}
+      <div class="tit">RESUMEN DE CONSUMO</div>${campos.slice(5,9).map((c,i)=>fila(c,i+5)).join('')}
+      <div class="tit">TARIFAS LOCALES</div>
+      <div class="tot">${campos.slice(9).map((c,i)=>fila(c,i+9)).join('')}</div>
+    </div>
+    <div class="leyenda" id="leyenda" hidden>Verde = leído de la foto · <u>Azul = calculado con lo leído</u> · <i>Naranja = valor de referencia, revísalo</i>.</div>
+    <input id="foto" type="file" accept="image/*" capture="environment" hidden>
+    <button class="btn out" id="bFoto">TOMAR / SUBIR FOTO</button>
+    <button class="btn pri" id="bScan" disabled>ESCANEAR FACTURA</button>
+    <button class="btn out" id="bSig" disabled>VER MI DASHBOARD</button>
+    <details class="raw" id="raw" hidden><summary>Ver texto que leyó el OCR</summary><pre id="rawTxt"></pre></details>
+    <a href="#" class="link" id="bDemo">probar sin foto (datos simulados)</a>
+  </div>`;
+
+  let archivo = null, nueva = null;
+
+  // "Consumo anterior" = m³ de la última factura guardada (si existe)
+  let ultimaFactura = null;
+  api('/facturas').then(r => { ultimaFactura = r.facturas[0] || null; }).catch(() => {});
+
+  function pintar(fac){
+    if(ultimaFactura && !fac._detectados.includes('anterior')) fac.anterior = ultimaFactura.actual;
+    $('chip').hidden = false;
+    campos.forEach((c, i) => setTimeout(() => {
+      const val = fac[c[1]], el = $('f'+i);
+      el.value = val == null ? '' : c[2] === '$' ? cop(val) : val;
+      if(c[1] === 'anterior' && val == null) el.placeholder = 'de tu factura anterior';
+      el.className = fac._detectados.includes(c[1]) ? 'ok' : (fac._calculados || []).includes(c[1]) ? 'calc' : 'falta';
+      $('chip').textContent = 'Leyendo... ' + c[0];
+      if(i === campos.length - 1){
+        const n = campos.filter(c => fac._detectados.includes(c[1])).length;
+        const k = campos.filter(c => (fac._calculados || []).includes(c[1])).length;
+        $('chip').textContent = `${n} leídos · ${k} calculados · ${cop(fac.total)}`;
+        $('estado').textContent = n >= 8 ? '¡Listo! Estos son los datos de tu factura.'
+                                         : 'Se leyeron pocos datos. Toma otra foto más nítida y vuelve a escanear.';
+        $('leyenda').hidden = false;
+        $('bSig').disabled = false; $('bScan').disabled = !archivo; $('bScan').textContent = 'ESCANEAR DE NUEVO';
+      }
+    }, 120 * (i + 1)));
+    if(fac._texto){ $('rawTxt').textContent = fac._texto; $('raw').hidden = false; }
+  }
+
+  $('bFoto').onclick = () => $('foto').click();
+  $('foto').onchange = e => {
+    archivo = e.target.files[0]; if(!archivo) return;
+    $('thumb').src = URL.createObjectURL(archivo); $('thumb').hidden = false;
+    $('bScan').disabled = false;
+    $('estado').textContent = 'Foto lista. Pulsa "Escanear factura".';
+  };
+
+  $('bScan').onclick = async () => {
+    if(!archivo) return;
+    $('bScan').disabled = true; $('bSig').disabled = true; $('chip').hidden = false;
+    $('estado').textContent = 'Extrayendo datos de la foto... (la primera vez tarda un poco más)';
+    try{
+      nueva = await leerFacturaConOCR(archivo, msg => { $('chip').textContent = msg; });
+      pintar(nueva);
+    }catch(err){
+      $('chip').hidden = true; $('bScan').disabled = false;
+      $('estado').textContent = 'No se pudo leer la factura: ' + err.message;
+    }
+  };
+
+  $('bDemo').onclick = e => { e.preventDefault(); nueva = generarFactura(); pintar(nueva); };
+
+  // Toma los valores (ya corregidos por el usuario) y pasa al dashboard
+  $('bSig').onclick = async () => {
+    const fac = {};
+    campos.forEach((c, i) => { const v = $('f'+i).value.trim(); fac[c[1]] = c[2] ? num(v) : v; });
+    if(!(fac.promedio > 0) || !(fac.valorM3 > 0) || !(fac.total > 0)){
+      $('estado').textContent = 'Revisa el consumo promedio, el valor por m³ y el total: deben ser mayores que cero.'; return; }
+    fac.fijo = fac.fijo || 0; fac.otros = fac.otros || 0; fac.dias = fac.dias || 30;
+    if(nueva && nueva._texto) fac.textoOCR = nueva._texto;
+    $('bSig').disabled = true; $('estado').textContent = 'Guardando factura...';
+    try{ await api('/facturas', 'POST', fac); if(!(S.user && S.user.dispositivo)) await api('/lecturas/simular', 'POST', {}); ir('dash'); }
+    catch(err){ $('estado').textContent = 'No se pudo guardar: ' + err.message; $('bSig').disabled = false; }
+  };
+}
+
+
+/* =====================================================================
+   SECCIÓN 6 · DASHBOARD (datos y cálculos vienen del servidor: GET /api/dashboard)
+   ===================================================================== */
+function medidor(fraccion){
+  const pt = (ang, r=85) => [110 + r*Math.cos(ang*Math.PI/180), 110 - r*Math.sin(ang*Math.PI/180)];
+  const tramo = (a1, a2, col) => { const [x1,y1]=pt(a1), [x2,y2]=pt(a2);
+    return `<path d="M${x1} ${y1} A85 85 0 0 1 ${x2} ${y2}" fill="none" stroke="${col}" stroke-width="20"/>`; };
+  return `<svg viewBox="0 0 220 125" role="img" aria-label="Velocímetro de factura estimada" style="width:100%;max-width:300px;display:block;margin:auto">
+    ${tramo(180,135,'#2E9E4F')}${tramo(135,90,'#A8CF2B')}${tramo(90,45,'#F5A623')}${tramo(45,0,'#D93A2F')}
+    <g id="aguja" style="transform-origin:110px 110px;transform:rotate(-90deg);transition:transform 1.1s cubic-bezier(.3,1.3,.5,1)" data-ang="${-90 + fraccion*180}">
+      <line x1="110" y1="110" x2="110" y2="38" stroke="#10224F" stroke-width="4" stroke-linecap="round"/>
+    </g><circle cx="110" cy="110" r="9" fill="#10224F"/></svg>`;
+}
+
+function grafico(semana){
+  const max = Math.max(...semana.map(d => d.litros), 1), H = 110;
+  return `<svg viewBox="0 0 300 140" role="img" aria-label="Consumo diario de los últimos 7 días en litros" style="width:100%">
+    <line x1="0" y1="${H}" x2="300" y2="${H}" stroke="#D7E2F3"/>` +
+    semana.map((d,i) => { const h = d.litros/max*(H-14), x = 10 + i*41;
+      return `<rect x="${x}" y="${H-h}" width="26" height="${h}" rx="4" fill="#1650C8"><title>${d.fecha}: ${d.litros} L</title></rect>
+      <text x="${x+13}" y="${H-h-4}" text-anchor="middle" font-size="9" fill="#10224F">${d.litros}</text>
+      <text x="${x+13}" y="${H+16}" text-anchor="middle" font-size="12" font-weight="700" fill="#5A6B8C">${d.dia}</text>`;
+    }).join('') + `</svg>`;
+}
+
+// Avisa con una notificación del sistema (si el usuario la permite) cuando hay alerta nueva
+function notificar(alerta){
+  try{
+    if(!alerta || !alerta.activa || !('Notification' in window)) return;
+    const mostrar = () => new Notification('Hydroloop BGA · ' + alerta.titulo, { body: alerta.mensaje });
+    if(Notification.permission === 'granted') mostrar();
+    else if(Notification.permission === 'default') Notification.requestPermission().then(p => p === 'granted' && mostrar());
+  }catch(e){}
+}
+
+async function vistaDashboard(){
+  screenEl.innerHTML = `<p class="center" style="margin-top:40px">Cargando tu consumo...</p>`;
+  let d;
+  let med = { lecturas: [], foto: null };
+  try{ [d, med] = await Promise.all([api('/dashboard'), api('/lecturas/medidor').catch(() => med)]); }
+  catch(err){ screenEl.innerHTML = `<p class="err center" style="margin-top:40px">${esc(err.message)}</p><button class="btn out" id="bRe">REINTENTAR</button>`;
+    $('bRe').onclick = render; return; }
+  if(S.screen !== 'dash') return;                            // el usuario cambió de pantalla mientras cargaba
+  if(!d.factura){ ir('scan'); return; }
+  const f = d.factura, c = d.calculo;
+
+  const alerta = !d.alerta
+    ? `<div class="alert ok" id="alerta"><span aria-hidden="true">📡</span><div><b>Sin datos del medidor</b>Aún no hay consumo de esta semana. Registra la lectura del medidor (abajo), conecta la ESP32-CAM o simula una semana.</div></div>`
+    : d.alerta.activa
+      ? `<div class="alert" id="alerta" role="alert"><span aria-hidden="true">⚠️</span><div><b>${esc(d.alerta.titulo)}</b>${esc(d.alerta.mensaje)}</div></div>`
+      : `<div class="alert ok" id="alerta"><span aria-hidden="true">✅</span><div><b>${esc(d.alerta.titulo)}</b>${esc(d.alerta.mensaje)}</div></div>`;
+
+  const historial = d.historial.map(h => `<div class="r" style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--line);font-size:13px">
+      <span>${esc(h.periodo || new Date(h.fecha).toLocaleDateString('es-CO'))}</span><span>${h.actual} m³</span><b>${cop(h.total)}</b></div>`).join('');
+
+  screenEl.innerHTML = `
+  <div class="dash-head">
+    <button class="icon-btn" id="bMenu" aria-label="Escanear otra factura">☰</button>
+    <span>Dashboard - Consumo</span>
+    <button class="icon-btn" id="bBell" aria-label="Ir a las alertas">🔔</button>
+  </div>
+  <div class="card center">
+    ${medidor(c ? c.fraccion : 0)}
+    <p class="cond" style="font-size:15px;margin-top:6px;color:var(--navy)">Consumo proyectado: ${c ? c.proyM3.toFixed(1) + ' m³' : '—'}</p>
+    <div class="big">${c ? cop(c.facturaEst) : '—'}</div>
+    <p class="cond" style="font-size:14px;color:var(--navy)">Factura estimada</p>
+    <p style="font-size:12px">Estrato ${esc(f.estrato)} · ${esc(f.municipio)} · Habitual: ${d.habitual} m³/mes</p>
+  </div>
+  <div class="card"><p class="cond" style="color:var(--navy);font-size:15px;text-align:center;margin:0 0 4px">Consumo diario (litros)</p>${grafico(d.semana)}
+    <p style="font-size:11px;text-align:center;margin:0">${d.fuente === 'real' ? '📷 Datos reales del medidor' : d.fuente === 'simulado' ? '🧪 Datos simulados' : ''}</p></div>
+  ${alerta}
+  ${tarjetaMedidor(med)}
+  <div class="card"><p class="cond" style="color:var(--navy);font-size:15px;margin:0 0 4px">Historial de facturas</p>${historial}
+    <button class="btn out" id="bAdd" style="margin-top:10px">+ ESCANEAR OTRA FACTURA</button></div>
+  <button class="btn out" id="bSim">SIMULAR NUEVA SEMANA DEL SENSOR</button>
+  <button class="btn out" id="bFuga">SIMULAR UNA FUGA</button>
+  <a href="#" class="link" id="bOut">cerrar sesión</a>`;
+
+  setTimeout(() => { const a = $('aguja'); if(a) a.style.transform = `rotate(${a.dataset.ang}deg)`; }, 80);
+  notificar(d.alerta);
+
+  const simular = async factor => { try{ await api('/lecturas/simular', 'POST', factor ? { factor } : {}); render(); }catch(err){ alert(err.message); } };
+  $('bMenu').onclick = () => ir('scan');
+  $('bAdd').onclick  = () => ir('scan');
+  $('bBell').onclick = () => $('alerta').scrollIntoView({behavior:'smooth'});
+  $('bSim').onclick  = () => simular();
+  $('bFuga').onclick = () => simular(1.5);
+  $('bOut').onclick  = e => { e.preventDefault(); cerrarSesion(); };
+  activarMedidor(med);
+}
+
+/* 6.6 Medidor de agua (Fase 1: ESP32-CAM) — última lectura, foto, lectura manual y serial */
+const ORIGEN = { camara: '📷 Cámara (ESP32-CAM)', dispositivo: '📡 Dispositivo', manual: '✍️ Escrita a mano' };
+const fechaCorta = f => new Date(f).toLocaleString('es-CO', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
+function tarjetaMedidor(med){
+  const ult = med.lecturas[0], foto = med.foto;
+  const estadoFoto = foto ? ({ ok: '✅ Leída', 'no-leida': '⚠️ No se pudo leer', dudosa: '⚠️ Lectura dudosa' })[foto.estado] : '';
+  return `<div class="card" id="cMedidor">
+    <p class="cond" style="color:var(--navy);font-size:15px;margin:0 0 6px">Medidor de agua</p>
+    ${ult ? `<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap">
+        <span class="cond" style="font-size:26px;color:var(--navy);text-transform:none;white-space:nowrap">${ult.valor.toLocaleString('es-CO', { minimumFractionDigits: 3 })} m³</span>
+        <span style="font-size:12px;color:var(--mute)">${fechaCorta(ult.fecha)}</span></div>
+      <p style="font-size:12px;margin:2px 0 8px">${ORIGEN[ult.origen] || ''}${ult.litros ? ` · ${ult.litros.toLocaleString('es-CO')} L desde la anterior` : ''}</p>`
+    : `<p style="font-size:13px">Aún no hay lecturas. Escribe el número que marca tu medidor o conecta la ESP32-CAM.</p>`}
+    ${foto ? `<div style="margin:6px 0 10px"><img id="fotoMed" alt="Última foto del medidor" style="width:100%;border-radius:10px;background:#EEF3FA;min-height:60px">
+      <p style="font-size:12px;margin:4px 0 0"><b>${estadoFoto}</b> · ${fechaCorta(foto.fecha)}${foto.valor != null ? ` · ${foto.valor} m³` : ''}<br>${esc(foto.mensaje)}</p></div>` : ''}
+    <label for="lecMan">Lectura del medidor (m³)</label>
+    <input id="lecMan" inputmode="decimal" placeholder="Ej: 1393,712">
+    <div class="err" id="msgMed" role="status"></div>
+    <button class="btn pri" id="bLec" style="margin-top:4px">REGISTRAR LECTURA</button>
+    <label for="serial" style="margin-top:16px">Serial de tu ESP32-CAM</label>
+    <div style="display:flex;gap:8px"><input id="serial" placeholder="Ej: ESP32-001" value="${esc((S.user && S.user.dispositivo) || '')}" autocapitalize="characters">
+      <button class="btn out" id="bSerial" style="margin:0;width:auto;padding:0 16px">GUARDAR</button></div>
+    <p style="font-size:11.5px;margin-top:6px">Debe ser el mismo que pusiste en el código de la ESP32-CAM. La cámara envía la foto cada madrugada.</p>
+  </div>`;
+}
+function activarMedidor(med){
+  if(med.foto && $('fotoMed')){                     // la foto necesita el token: se descarga con fetch
+    fetch(API_URL + '/api/lecturas/medidor/foto', { headers: { Authorization: 'Bearer ' + S.token } })
+      .then(r => r.ok ? r.blob() : null).then(b => { if(b && $('fotoMed')) $('fotoMed').src = URL.createObjectURL(b); }).catch(() => {});
+  }
+  $('bLec').onclick = async () => {
+    const v = $('lecMan').value.trim().replace(/\s/g, '').replace(',', '.');
+    if(!/^\d+(\.\d+)?$/.test(v)){ $('msgMed').textContent = 'Escribe el número del medidor, por ejemplo 1393,712'; return; }
+    $('bLec').disabled = true;
+    try{
+      const r = await api('/lecturas/medidor/manual', 'POST', { lectura: Number(v) });
+      $('msgMed').style.color = 'var(--green)'; $('msgMed').textContent = r.mensaje;
+      setTimeout(render, 1200);
+    }catch(err){ $('msgMed').style.color = ''; $('msgMed').textContent = err.message; $('bLec').disabled = false; }
+  };
+  $('bSerial').onclick = async () => {
+    const s = $('serial').value.trim();
+    try{
+      const r = await api('/auth/yo', 'PUT', { dispositivo: s || null });
+      S.user = r.usuario; $('msgMed').style.color = 'var(--green)';
+      $('msgMed').textContent = s ? `Listo: la ESP32-CAM "${s}" quedó vinculada a tu cuenta.` : 'Serial borrado.';
+    }catch(err){ $('msgMed').style.color = ''; $('msgMed').textContent = err.message; }
+  };
+}
+
+
+/* =====================================================================
+   SECCIÓN 7 · NAVEGACIÓN Y ARRANQUE
+   ===================================================================== */
+function render(){
+  if(!S.token && ['scan','dash'].includes(S.screen)) S.screen = 'welcome';
+  ({ welcome: vistaBienvenida, scan: vistaEscaneo, dash: vistaDashboard })[S.screen]();
+  screenEl.scrollTop = 0;
+}
+(async () => {
+  cargar();
+  if(S.token){
+    try{ S.user = (await api('/auth/yo')).usuario; S.screen = 'dash'; }
+    catch(e){ S.token = null; guardar(); S.screen = 'welcome'; }
+  }
+  render();
+})();
+</script>
+</body>
+</html>

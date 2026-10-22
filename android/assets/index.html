@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hydroloop BGA</title>
+<!-- Pantalla inicial de la app Android: pide la dirección del servidor Hydroloop y entra. -->
+<style>
+:root{--navy:#0B1F5C;--blue:#1650C8;--ink:#10224F;--mute:#5A6B8C;--line:#D7E2F3;--red:#D93A2F;--green:#2E9E4F}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:#fff;color:var(--ink);font:400 15px/1.45 system-ui,-apple-system,Roboto,sans-serif}
+main{min-height:100%;display:flex;flex-direction:column;justify-content:center;padding:28px 24px;max-width:440px;margin:auto}
+.logo{text-align:center}
+h1{font:800 34px/1 system-ui,Roboto,sans-serif;color:var(--navy);text-transform:uppercase;letter-spacing:.02em;margin:10px 0 4px;text-align:center}
+.tag{color:var(--blue);font-weight:700;text-align:center;margin:0 0 26px}
+label{display:block;font-weight:700;font-size:13px;color:var(--navy);margin:0 0 6px}
+input{width:100%;padding:13px 12px;border:1.5px solid var(--line);border-radius:12px;font:inherit;color:var(--ink);background:#fff}
+input:focus{outline:3px solid #7FB0FF;outline-offset:1px}
+.help{font-size:12.5px;color:var(--mute);margin:8px 0 0}
+.btn{display:block;width:100%;padding:14px;border-radius:14px;font:700 15px system-ui,Roboto,sans-serif;letter-spacing:.03em;margin-top:14px;border:2px solid var(--blue);cursor:pointer}
+.pri{background:var(--blue);color:#fff}.out{background:#fff;color:var(--blue)}
+.btn:disabled{opacity:.5}
+.msg{min-height:22px;margin-top:14px;font-size:13.5px;text-align:center}
+.msg.err{color:var(--red)}.msg.ok{color:var(--green)}
+.tips{margin-top:18px;font-size:12.5px;color:var(--mute);border-top:1px solid var(--line);padding-top:12px}
+.tips b{color:var(--ink)}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<main>
+  <div class="logo">
+    <svg width="64" height="76" viewBox="0 0 60 70" aria-hidden="true">
+      <path d="M30 4C30 4 8 30 8 42a22 22 0 0 0 44 0C52 30 30 4 30 4Z" fill="none" stroke="#1650C8" stroke-width="5"/>
+      <path d="M38 40c2 8-3 13-9 13" fill="none" stroke="#1650C8" stroke-width="4" stroke-linecap="round"/>
+    </svg>
+  </div>
+  <h1>Hydroloop BGA</h1>
+  <p class="tag">¡Toma el control de tu agua!</p>
+
+  <form id="f" autocomplete="off">
+    <label for="url">Dirección del servidor</label>
+    <input id="url" inputmode="url" placeholder="http://192.168.1.10:3000" spellcheck="false" autocapitalize="off">
+    <p class="help">Es la dirección del computador que tiene el servidor encendido (<b>npm start</b>), o la del servidor publicado en internet.</p>
+    <button class="btn pri" id="conectar" type="submit">CONECTAR</button>
+    <button class="btn out" id="igual" type="button" hidden>ENTRAR DE TODOS MODOS</button>
+  </form>
+  <div class="msg" id="msg" role="status"></div>
+
+  <div class="tips">
+    <b>¿Cómo sé la dirección?</b> En el computador del servidor abre la terminal, escribe <b>ipconfig</b> y busca
+    “Dirección IPv4” (por ejemplo 192.168.1.10). La dirección queda: <b>http://192.168.1.10:3000</b>.
+    El celular debe estar en la misma red WiFi.
+  </div>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const leer = k => { try{ return localStorage.getItem(k); }catch(e){ return null; } };
+const guardar = (k, v) => { try{ localStorage.setItem(k, v); }catch(e){} };
+const sesion = { get(k){ try{ return sessionStorage.getItem(k); }catch(e){ return null; } }, set(k, v){ try{ sessionStorage.setItem(k, v); }catch(e){} } };
+
+function normalizar(u){
+  u = (u || '').trim().replace(/\s+/g, '');
+  if(!u) return '';
+  if(!/^https?:\/\//i.test(u)) u = 'http://' + u;
+  return u.replace(/\/+$/, '');
+}
+function aviso(texto, tipo){ $('msg').textContent = texto; $('msg').className = 'msg ' + (tipo || ''); }
+function entrar(u){
+  guardar('hydroloop_servidor', u);
+  sesion.set('entro', '1');
+  location.href = u + '/?app=1';
+}
+
+// Prueba 2: cargar una imagen del servidor (funciona aunque el navegador bloquee fetch desde la app)
+function probarImagen(u){
+  return new Promise(ok => {
+    const img = new Image(), t = setTimeout(() => { img.src = ''; ok(false); }, 7000);
+    img.onload = () => { clearTimeout(t); ok(true); };
+    img.onerror = () => { clearTimeout(t); ok(false); };
+    img.src = u + '/icono.png?t=' + Date.now();
+  });
+}
+async function probar(u){
+  return (await probarFetch(u)) || (await probarImagen(u));
+}
+async function probarFetch(u){
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), 7000);
+  try{
+    const r = await fetch(u + '/api/salud', { signal: ctrl.signal, cache: 'no-store' });
+    const d = await r.json().catch(() => ({}));
+    return r.ok && d.ok;
+  }catch(e){ return false; }
+  finally{ clearTimeout(t); }
+}
+
+async function conectar(){
+  const u = normalizar($('url').value);
+  if(!u){ aviso('Escribe la dirección del servidor.', 'err'); return; }
+  $('url').value = u;
+  $('conectar').disabled = true; $('igual').hidden = true;
+  aviso('Conectando con ' + u + '…');
+  if(await probar(u)){ aviso('¡Conectado!', 'ok'); entrar(u); return; }
+  $('conectar').disabled = false; $('igual').hidden = false;
+  aviso('No se pudo conectar. Revisa que el servidor esté encendido, que el celular esté en la misma red WiFi y que el firewall de Windows permita la conexión.', 'err');
+}
+
+$('f').onsubmit = e => { e.preventDefault(); conectar(); };
+$('igual').onclick = () => { const u = normalizar($('url').value); if(u) entrar(u); };
+
+// Si ya hay un servidor guardado y es la primera vez en esta sesión, entra solo.
+// (Si el usuario volvió con el botón Atrás, se queda aquí para que pueda cambiarlo.)
+const guardado = leer('hydroloop_servidor');
+if(guardado){
+  $('url').value = guardado;
+  if(!sesion.get('entro')) conectar();
+  else aviso('Puedes cambiar el servidor o volver a conectar.');
+}
+</script>
+</body>
+</html>
