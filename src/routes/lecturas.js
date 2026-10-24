@@ -41,8 +41,11 @@ router.post('/medidor', async (req, res, next) => {
   } catch (e) { responderError(res, next)(e); }
 });
 
-// POST /api/lecturas/foto?dispositivo=ESP32-001&enteros=5&decimales=3&recorte=0.2,0.35,0.6,0.15
+// POST /api/lecturas/foto?dispositivo=ESP32-001&enteros=5&decimales=3&recorte=0.2,0.35,0.6,0.15&rotar=90&espejo=1
 // Cabeceras: x-device-key, Content-Type: image/jpeg     Cuerpo: la foto JPEG
+//   rotar  = 0, 90, 180 o 270 (grados, sentido del reloj) si la cámara quedó de lado
+//   espejo = 1 si la imagen sale invertida como en un espejo
+//   El recorte se aplica sobre la foto YA enderezada (la que se ve en la app).
 router.post('/foto', express.raw({ type: ['image/jpeg', 'application/octet-stream'], limit: '3mb' }), async (req, res, next) => {
   try {
     const u = await usuarioDelDispositivo(req);
@@ -50,8 +53,16 @@ router.post('/foto', express.raw({ type: ['image/jpeg', 'application/octet-strea
     const enteros = Math.min(Math.max(parseInt(req.query.enteros) || 5, 1), 9);
     const decimales = Math.min(Math.max(parseInt(req.query.decimales ?? 3) || 0, 0), 4);
     const recorte = req.query.recorte ? String(req.query.recorte).split(',') : null;
-    const ocr = await leerFotoMedidor(req.body, { recorte, enteros, decimales });
-    const foto = { usuario: u._id, jpeg: req.body, texto: ocr.texto, valor: ocr.valor };
+    const rotar = [90, 180, 270].includes(Number(req.query.rotar)) ? Number(req.query.rotar) : 0;
+    const espejo = req.query.espejo === '1';
+    let jpeg = req.body;
+    if (rotar || espejo) {                         // enderezar antes de leer (y guardar derecha)
+      const sharp = require('sharp');            // dos pasos: sharp aplica el espejo antes que el giro
+      if (rotar) jpeg = await sharp(jpeg).rotate(rotar).jpeg({ quality: 92 }).toBuffer();
+      if (espejo) jpeg = await sharp(jpeg).flop().jpeg({ quality: 92 }).toBuffer();
+    }
+    const ocr = await leerFotoMedidor(jpeg, { recorte, enteros, decimales });
+    const foto = { usuario: u._id, jpeg, texto: ocr.texto, valor: ocr.valor };
     if (ocr.valor == null) {
       await FotoMedidor.create({ ...foto, estado: 'no-leida', mensaje: `No se leyeron los ${enteros + decimales} dígitos del medidor. Revisa la foto o escribe la lectura a mano.` });
       await limpiarFotos(u._id);
@@ -93,6 +104,16 @@ router.get('/medidor', requiereSesion, async (req, res, next) => {
       lecturas: lecturas.map(l => ({ valor: l.valor, fecha: l.fecha, origen: l.origen, litros: Math.round(l.litros) })),
       foto: foto ? { id: foto._id, fecha: foto.fecha, estado: foto.estado, valor: foto.valor, texto: foto.texto, mensaje: foto.mensaje } : null
     });
+  } catch (e) { next(e); }
+});
+
+// DELETE /api/lecturas/medidor  → borra lecturas, consumo calculado y fotos del medidor (empezar de cero)
+router.delete('/medidor', requiereSesion, async (req, res, next) => {
+  try {
+    await LecturaMedidor.deleteMany({ usuario: req.usuarioId });
+    await Lectura.deleteMany({ usuario: req.usuarioId, origen: 'medidor' });
+    await FotoMedidor.deleteMany({ usuario: req.usuarioId });
+    res.json({ ok: true });
   } catch (e) { next(e); }
 });
 
