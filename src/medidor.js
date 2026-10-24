@@ -242,9 +242,23 @@ async function variantes(jpeg, rect, digitos) {
  * opciones.enteros  = cuántos dígitos negros (m³) tiene el medidor (normalmente 5)
  * opciones.decimales= cuántos dígitos rojos (fracción de m³) se leen (0 a 3)
  */
+// Si el recorte que envía la cámara no sirve, prueba solo estas franjas (todo el ancho de la foto)
+const FRANJAS_AUTO = [[0, 0.42, 1, 0.30], [0, 0.34, 1, 0.30], [0, 0.50, 1, 0.30], [0, 0.26, 1, 0.30], [0, 0.58, 1, 0.30]];
+
 async function leerFotoMedidor(jpeg, { recorte, enteros = 5, decimales = 3 } = {}) {
   const tam = tamanoJpeg(jpeg);
   if (!tam) throw new ErrorLectura(400, 'La foto debe ser JPEG.');
+  const zonas = [recorte, ...FRANJAS_AUTO].filter(Boolean);
+  let r = null;
+  for (const z of zonas) {
+    r = await leerZona(jpeg, tam, z, enteros, decimales);
+    if (process.env.DEBUG_OCR) console.log('  [ocr] zona', String(z), '->', r.valor);
+    if (r.valor != null) { r.zona = z.map(Number).join(','); break; }
+  }
+  return r;
+}
+
+async function leerZona(jpeg, tam, recorte, enteros, decimales) {
   let rect = null;
   if (recorte) {
     const [x, y, w, h] = recorte.map(Number);
