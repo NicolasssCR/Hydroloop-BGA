@@ -29,7 +29,8 @@ const responderError = (res, next) => e => e instanceof ErrorLectura ? res.statu
 const resumen = r => ({
   ok: true, lectura: r.lectura.valor, fecha: r.lectura.fecha, litros: Math.round(r.litros),
   mensaje: r.primera ? 'Primera lectura guardada: desde la próxima se calcula el consumo.'
-                     : `Consumo desde la lectura anterior: ${Math.round(r.litros)} L.`
+         : r.reinicio ? `Lectura guardada. Es menor que la anterior (${r.previa.valor} m³), así que se toma como nuevo punto de partida.`
+                      : `Consumo desde la lectura anterior: ${Math.round(r.litros)} L.`
 });
 
 // POST /api/lecturas/medidor     (dispositivo que ya convierte la foto en número)
@@ -65,7 +66,6 @@ router.post('/foto', express.raw({ type: ['image/jpeg', 'application/octet-strea
     const foto = { usuario: u._id, jpeg, texto: ocr.texto, valor: ocr.valor };
     if (ocr.valor == null) {
       await FotoMedidor.create({ ...foto, estado: 'no-leida', mensaje: `No se leyeron los ${enteros + decimales} dígitos del medidor. Revisa la foto o escribe la lectura a mano.` });
-      await limpiarFotos(u._id);
       return res.status(422).json({ error: 'No se pudieron leer los dígitos del medidor.', leido: ocr.texto });
     }
     ocr.valor = await elegirCandidato(u._id, ocr.candidatos);      // la que cuadra con la lectura anterior
@@ -73,20 +73,14 @@ router.post('/foto', express.raw({ type: ['image/jpeg', 'application/octet-strea
     try {
       const r = await registrarLectura(u._id, ocr.valor, 'camara');
       await FotoMedidor.create({ ...foto, estado: 'ok', mensaje: resumen(r).mensaje });
-      await limpiarFotos(u._id);
       res.status(201).json({ ...resumen(r), leido: ocr.texto });
     } catch (e) {
       if (!(e instanceof ErrorLectura)) throw e;
       await FotoMedidor.create({ ...foto, estado: 'dudosa', mensaje: e.message });
-      await limpiarFotos(u._id);
       res.status(e.status).json({ error: e.message, leido: ocr.texto });
     }
   } catch (e) { responderError(res, next)(e); }
 });
-async function limpiarFotos(usuario) {             // guarda solo las 15 fotos más recientes
-  const viejas = await FotoMedidor.find({ usuario }).sort({ fecha: -1 }).skip(15).select('_id');
-  if (viejas.length) await FotoMedidor.deleteMany({ _id: { $in: viejas.map(v => v._id) } });
-}
 
 // POST /api/lecturas/medidor/manual   { "lectura": 1393.712 }   (el usuario lee el medidor y lo escribe)
 router.post('/medidor/manual', requiereSesion, async (req, res, next) => {
@@ -117,10 +111,24 @@ router.delete('/medidor', requiereSesion, async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-// GET /api/lecturas/medidor/foto  → la última foto (JPEG)
-router.get('/medidor/foto', requiereSesion, async (req, res, next) => {
+// GET /api/lecturas/medidor/fotos  → historial de fotos del usuario que inició sesión (sin la imagen)
+router.get('/medidor/fotos', requiereSesion, async (req, res, next) => {
   try {
-    const foto = await FotoMedidor.findOne({ usuario: req.usuarioId }).sort({ fecha: -1 }).select('+jpeg');
+    const fotos = await FotoMedidor.find({ usuario: req.usuarioId }).sort({ fecha: -1 }).limit(Number(req.query.limite) || 30);
+    res.json({ fotos: fotos.map(f => ({ id: f._id, fecha: f.fecha, estado: f.estado, valor: f.valor, mensaje: f.mensaje })) });
+  } catch (e) { next(e); }
+});
+
+// GET /api/lecturas/medidor/foto       → la última foto (JPEG)
+// GET /api/lecturas/medidor/foto/:id   → una foto del historial (solo si es del mismo usuario)
+router.get(['/medidor/foto', '/medidor/foto/:id'], requiereSesion, async (req, res, next) => {
+  try {
+    const filtro = { usuario: req.usuarioId };
+    if (req.params.id) {
+      if (!/^[a-f0-9]{24}$/i.test(req.params.id)) return res.status(404).json({ error: 'Foto no encontrada.' });
+      filtro._id = req.params.id;
+    }
+    const foto = await FotoMedidor.findOne(filtro).sort({ fecha: -1 }).select('+jpeg');
     if (!foto) return res.status(404).json({ error: 'Aún no hay fotos del medidor.' });
     res.type('image/jpeg').send(foto.jpeg);
   } catch (e) { next(e); }
@@ -134,8 +142,8 @@ router.post('/sensor', async (req, res, next) => {
       return res.status(401).json({ error: 'Clave de dispositivo inválida.' });
     const { dispositivo, litros } = req.body || {};
     const l = Number(litros);
-    if (!dispositivo || !Number.isFinite(l) || l < 0 || l > 5000)
-      return res.status(400).json({ error: 'Envía "dispositivo" y "litros" (0 a 5000).' });
+    if (!dispositivo || !Number.isFinite(l) || l < 0)
+      return res.status(400).json({ error: 'Envía "dispositivo" y "litros" (un número positivo).' });
     const u = await Usuario.findOne({ dispositivo });
     if (!u) return res.status(404).json({ error: 'Ese dispositivo no está vinculado a ningún usuario.' });
     await Lectura.create({ usuario: u._id, litros: l, origen: 'sensor' });

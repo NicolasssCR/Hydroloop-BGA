@@ -731,6 +731,8 @@ function tarjetaMedidor(med){
     : `<p style="font-size:13px">Aún no hay lecturas. Escribe el número que marca tu medidor o conecta la ESP32-CAM.</p>`}
     ${foto ? `<div style="margin:6px 0 10px"><img id="fotoMed" alt="Última foto del medidor" style="width:100%;border-radius:10px;background:#EEF3FA;min-height:60px">
       <p style="font-size:12px;margin:4px 0 0"><b>${estadoFoto}</b> · ${fechaCorta(foto.fecha)}${foto.valor != null ? ` · ${foto.valor} m³` : ''}<br>${esc(foto.mensaje)}</p></div>` : ''}
+    ${foto ? `<details id="histFotos" style="margin:0 0 12px"><summary style="cursor:pointer;font-weight:700;color:var(--blue);font-size:13px">📷 Mis fotos del medidor</summary>
+      <div id="listaFotos" style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:8px"><p style="font-size:12px">Cargando…</p></div></details>` : ''}
     <label for="lecMan">Lectura del medidor (m³)</label>
     <input id="lecMan" inputmode="decimal" placeholder="Ej: 1393,712">
     <div class="err" id="msgMed" role="status"></div>
@@ -738,15 +740,28 @@ function tarjetaMedidor(med){
     <label for="serial" style="margin-top:16px">Serial de tu ESP32-CAM</label>
     <div style="display:flex;gap:8px"><input id="serial" placeholder="Ej: ESP32-001" value="${esc((S.user && S.user.dispositivo) || '')}" autocapitalize="characters">
       <button class="btn out" id="bSerial" style="margin:0;width:auto;padding:0 16px">GUARDAR</button></div>
-    <p style="font-size:11.5px;margin-top:6px">Debe ser el mismo que pusiste en el código de la ESP32-CAM. La cámara envía la foto cada madrugada.</p>
+    <p style="font-size:11.5px;margin-top:6px">Debe ser el mismo que pusiste en el código de la ESP32-CAM. La cámara envía la foto cada madrugada.
+      Las fotos se guardan solo en la cuenta que tiene el serial: si otra persona lo guarda en su cuenta, las fotos nuevas le llegan a ella y las tuyas se quedan aquí.</p>
     ${ult || foto ? `<a href="#" class="link" id="bBorrarMed" style="color:var(--red)">Borrar lecturas del medidor y empezar de cero</a>` : ''}
   </div>`;
 }
+const verFoto = (ruta, img) => fetch(API_URL + '/api/lecturas/medidor/' + ruta, { headers: { Authorization: 'Bearer ' + S.token } })   // la foto necesita el token
+  .then(r => r.ok ? r.blob() : null).then(b => { if(b && img && img.isConnected) img.src = URL.createObjectURL(b); }).catch(() => {});
 function activarMedidor(med){
-  if(med.foto && $('fotoMed')){                     // la foto necesita el token: se descarga con fetch
-    fetch(API_URL + '/api/lecturas/medidor/foto', { headers: { Authorization: 'Bearer ' + S.token } })
-      .then(r => r.ok ? r.blob() : null).then(b => { if(b && $('fotoMed')) $('fotoMed').src = URL.createObjectURL(b); }).catch(() => {});
-  }
+  if(med.foto && $('fotoMed')) verFoto('foto', $('fotoMed'));
+  if($('histFotos')) $('histFotos').ontoggle = async () => {
+    if(!$('histFotos').open || $('histFotos').dataset.ok) return;
+    $('histFotos').dataset.ok = '1';
+    try{
+      const { fotos } = await api('/lecturas/medidor/fotos');
+      const ico = { ok: '✅', 'no-leida': '⚠️', dudosa: '⚠️' };
+      $('listaFotos').innerHTML = fotos.length ? fotos.map(f => `<figure style="margin:0">
+          <img data-id="${esc(String(f.id))}" alt="Foto del medidor" style="width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:8px;background:#EEF3FA">
+          <figcaption style="font-size:11px;line-height:1.3">${ico[f.estado] || ''} ${fechaCorta(f.fecha)}${f.valor != null ? '<br>' + f.valor + ' m³' : ''}</figcaption></figure>`).join('')
+        : '<p style="font-size:12px">Aún no hay fotos.</p>';
+      $('listaFotos').querySelectorAll('img[data-id]').forEach(img => verFoto('foto/' + img.dataset.id, img));
+    }catch(err){ $('listaFotos').innerHTML = `<p style="font-size:12px">${esc(err.message)}</p>`; }
+  };
   $('bLec').onclick = async () => {
     const v = $('lecMan').value.trim().replace(/\s/g, '').replace(',', '.');
     if(!/^\d+(\.\d+)?$/.test(v)){ $('msgMed').textContent = 'Escribe el número del medidor, por ejemplo 1393,712'; return; }
@@ -767,7 +782,7 @@ function activarMedidor(med){
     try{
       const r = await api('/auth/yo', 'PUT', { dispositivo: s || null });
       S.user = r.usuario; $('msgMed').style.color = 'var(--green)';
-      $('msgMed').textContent = s ? `Listo: la ESP32-CAM "${s}" quedó vinculada a tu cuenta.` : 'Serial borrado.';
+      $('msgMed').textContent = s ? `Listo: desde ahora las fotos de la ESP32-CAM "${s}" se guardan solo en tu cuenta.` : 'Serial borrado.';
     }catch(err){ $('msgMed').style.color = ''; $('msgMed').textContent = err.message; }
   };
 }

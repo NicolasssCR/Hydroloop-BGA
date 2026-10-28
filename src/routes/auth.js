@@ -7,6 +7,11 @@ const requiereSesion = require('../middleware/auth');
 
 const firmar = u => jwt.sign({ sub: u._id.toString() }, process.env.JWT_SECRET, { expiresIn: '30d' });
 const correoValido = c => typeof c === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(c);
+// Una ESP32-CAM envía sus fotos a UNA sola cuenta: la última que escribió su serial.
+// Las fotos y lecturas que ya tenía cada cuenta se quedan en esa cuenta.
+const liberarSerial = (serial, menosId) => serial
+  ? Usuario.updateMany({ dispositivo: serial, ...(menosId ? { _id: { $ne: menosId } } : {}) }, { dispositivo: null })
+  : null;
 
 // POST /api/auth/registro  { nombre, correo, clave, estrato, dir, municipio, dispositivo? }
 router.post('/registro', async (req, res, next) => {
@@ -16,6 +21,7 @@ router.post('/registro', async (req, res, next) => {
       return res.status(400).json({ error: 'Revisa el nombre, un correo válido y una contraseña de mínimo 4 caracteres.' });
     if (await Usuario.exists({ correo: correo.toLowerCase() }))
       return res.status(409).json({ error: 'Ya existe una cuenta con ese correo.' });
+    if (dispositivo) await liberarSerial(String(dispositivo).trim());
     const u = await Usuario.create({
       nombre, correo, claveHash: await bcrypt.hash(clave, 10),
       estrato: String(estrato || '3'), dir: dir || '', municipio: municipio || 'Bucaramanga',
@@ -52,8 +58,7 @@ router.put('/yo', requiereSesion, async (req, res, next) => {
     const cambios = Object.fromEntries(campos.filter(k => req.body[k] !== undefined).map(k => [k, req.body[k]]));
     if (cambios.dispositivo !== undefined) {
       cambios.dispositivo = cambios.dispositivo ? String(cambios.dispositivo).trim() : null;
-      if (cambios.dispositivo && await Usuario.exists({ dispositivo: cambios.dispositivo, _id: { $ne: req.usuarioId } }))
-        return res.status(409).json({ error: 'Ese serial ya está vinculado a otra cuenta.' });
+      await liberarSerial(cambios.dispositivo, req.usuarioId);      // si otra cuenta la tenía, pasa a esta
     }
     const u = await Usuario.findByIdAndUpdate(req.usuarioId, cambios, { new: true });
     res.json({ usuario: u.publico() });

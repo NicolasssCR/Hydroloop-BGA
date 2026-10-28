@@ -7,7 +7,6 @@ const Lectura = require('./models/Lectura');
 
 const DIA = 86400000;
 const OFFSET_BOGOTA = -5 * 3600000;               // Colombia no tiene horario de verano
-const MAX_M3_DIA = 3;                              // más de 3 m³ (3.000 L) en un día: lectura dudosa
 
 class ErrorLectura extends Error {
   constructor(status, mensaje) { super(mensaje); this.status = status; }
@@ -34,27 +33,22 @@ function repartirPorDia(desde, hasta, litros) {
 async function elegirCandidato(usuarioId, candidatos, cuando = new Date()) {
   const previa = await LecturaMedidor.findOne({ usuario: usuarioId }).sort({ fecha: -1 });
   if (!previa) return candidatos[0];
-  const dias = Math.max((cuando - previa.fecha) / DIA, 1);
-  const plausibles = candidatos.filter(v => v >= previa.valor - 0.0005 && v - previa.valor <= MAX_M3_DIA * dias);
-  return plausibles.length ? plausibles.sort((a, b) => (a - previa.valor) - (b - previa.valor))[0] : candidatos[0];
+  const mayores = candidatos.filter(v => v >= previa.valor - 0.0005);   // el medidor normalmente sube
+  return mayores.length ? mayores.sort((a, b) => a - b)[0] : candidatos[0];
 }
 
 async function registrarLectura(usuarioId, valor, origen, cuando = new Date()) {
   valor = Number(valor);
-  if (!Number.isFinite(valor) || valor < 0 || valor > 9999999)
+  if (!Number.isFinite(valor) || valor < 0)            // sin límites: cualquier número positivo
     throw new ErrorLectura(400, 'La lectura debe ser un número en m³ (por ejemplo 1393.712).');
   valor = Math.round(valor * 1000) / 1000;
 
   const previa = await LecturaMedidor.findOne({ usuario: usuarioId }).sort({ fecha: -1 });
-  let litros = 0;
+  let litros = 0, reinicio = false;
   if (previa) {
     const diff = valor - previa.valor;
-    if (diff < -0.0005)
-      throw new ErrorLectura(422, `La lectura (${valor} m³) es menor que la anterior (${previa.valor} m³). El medidor solo sube: revisa la foto o el número.`);
-    const dias = Math.max((cuando - previa.fecha) / DIA, 1 / 24);
-    if (diff > MAX_M3_DIA * Math.max(dias, 1))
-      throw new ErrorLectura(422, `Consumo dudoso: ${diff.toFixed(3)} m³ en ${(dias * 24).toFixed(1)} horas. Revisa la lectura.`);
-    litros = Math.max(0, diff) * 1000;
+    if (diff < 0) reinicio = true;                   // menor que la anterior: se toma como nuevo punto de partida
+    else litros = diff * 1000;
   }
   const lectura = await LecturaMedidor.create({ usuario: usuarioId, fecha: cuando, valor, origen, litros });
   await Lectura.deleteMany({ usuario: usuarioId, origen: 'simulado' });   // llegan datos reales: fuera la simulación
@@ -62,7 +56,7 @@ async function registrarLectura(usuarioId, valor, origen, cuando = new Date()) {
     const partes = repartirPorDia(previa.fecha, cuando, litros);
     await Lectura.insertMany(partes.map(p => ({ usuario: usuarioId, fecha: p.fecha, litros: p.litros, origen: 'medidor' })));
   }
-  return { lectura, previa, litros, primera: !previa };
+  return { lectura, previa, litros, primera: !previa, reinicio };
 }
 
 // ---------------------------------------------------------------- OCR de la foto
